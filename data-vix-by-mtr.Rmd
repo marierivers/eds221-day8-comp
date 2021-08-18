@@ -1,0 +1,186 @@
+---
+title: "data-viz-by-mtr"
+author: "Marie Rivers"
+date: "8/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# General use packages:
+library(tidyverse)
+library(here)
+library(janitor)
+
+# Specifically for plots
+library(ggplot2)
+library(patchwork)
+library(gghighlight)
+library(paletteer)
+library(ggExtra)
+library(ggrepel)
+library(ggbeeswarm)
+
+# and for another dataset we'll explore:
+library(gapminder)
+
+# Spatial
+library(sf) # for working with spatial data in R
+```
+
+```{r}
+# read in data
+lizards <- read_csv(here("data_tidy", "lizards.csv"))
+
+# type `here()` in the console to determine where "here" is
+```
+Histogram (really bad) of lizard weights
+```{r}
+# histograms only need one variable
+ggplot(data = lizards, aes(x = weight)) +
+  geom_histogram(fill = "orange", color = "blue",
+                 size = 2,
+                 linetype = "dotted")
+
+# Color refers to points and lines. Fill refers to polygons
+# Size of polygon refers to the width of the border
+```
+Scatter Plot
+```{r}
+# total_length on x-axis; weight on y-axis
+# each shape number corresponds a different shape (0-25). some have fill colors. or you can use ascii codes
+
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(shape = 22,
+             fill = "yellow",
+             color = "red",
+             size = 3,
+             alpha = 0.7) # transparency: 0 = completelly transparent, 1 = opaque 
+```
+Bubble plot (take a point and change its size based on a variable)
+```{r}
+# bubble plot where the color of the points changes based on common_name and the size of points varies based on total_lenth.
+# DISCLAIMER: BAD IDEA
+
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = common_name, size = total_length),
+             shape = 22,
+             fill = "black") +
+  theme_light()
+```
+Facet grid vs. facet wrap
+#### facet wrap is a bunch of graphs in a row that wraps below if needed for space
+```{r}
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = common_name)) +
+  theme_light() +
+  facet_wrap(~common_name, ncol = 4) # `~` means "by"
+# you can change the number of columns in facet wrap. fills up first row first, then goes onto the next row
+```
+Facet Grid
+```{r}
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = common_name)) +
+  facet_grid(sex ~ tail) # row, then columns
+# populates with data at each intersection
+```
+Getting things in order
+(default is alphabetical)
+```{r}
+# find total lizard counts by common_name
+lizard_count <- lizards %>% 
+  group_by(common_name) %>% 
+  summarise(count = n())
+
+# or
+lizard_count2 <- lizards %>% dplyr::count(common_name)
+lizard_count_name_tail <- lizards %>%  count(common_name, tail)
+
+# make common_name a factor, and assign each factor a level based on a value in another variable. Add a negative sign infront of the other variable to flip the order.
+
+# `fct_reorder` = factor reorder
+ggplot(data = lizard_count, aes(y = fct_reorder(common_name, count), x = count)) +
+  geom_col(aes(fill = common_name), show.legend = FALSE) +
+  labs(x = "Lizard counts",
+       y = "Number of Lizards")
+# switched y and x to make it more readable or use `coord_flip()`
+```
+Try converting common name to an ordered factor outside of ggplot
+```{r}
+# make common name a factor based on count
+common_name_factor <- lizard_count %>% 
+  mutate(common_name = fct_reorder(common_name, count))
+
+levels(common_name_factor$common_name)
+```
+## Axis scale breaks, limits and labels
+Scatterplot: total_length (x) vs. weight (y)
+```{r}
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point() +
+  scale_x_continuous(breaks = c(0, 10, 50, 100, 500),
+                     limits = c(0, 500),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 70, by = 10),
+                     limits = c(0, 70),
+                     expand = c(0, 0))
+# breaks are the tic mark breaks. the vector can be created manually or by sequence
+# limits are min and max value
+```
+Transform the date column to class Date, then find counts of observations by date
+```{r}
+lizard_obs_count <- lizards %>% # if you attach `lubridate` up top you dont need `lubridate::`
+  mutate(date = lubridate::mdy(date)) %>% 
+  count(date) %>% 
+  mutate(count = n)
+
+class(lizard_obs_count$date)
+```
+
+Make a line plot (geom_line()) of date (x) and count (y)
+```{r}
+# `y` lowercase is 2 diget year, `Y` upper case is a 4 year date
+ggplot(data = lizard_obs_count, aes(x = date, y = count)) +
+  geom_line() +
+  scale_x_date(date_breaks = "3 years",
+               date_labels = "%Y")
+```
+Color Scales
+```{r}
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = weight)) +
+  scale_color_gradient(low = "red", high = "navy") 
+
+# scale_color_gradient for 2 colors. scale)color)gradientn for multiple colors
+```
+```{r}
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = weight)) +
+  scale_color_gradientn(colors = c("orange", "cyan", "chartreuse", "black")) 
+
+```
+```{r}
+# to set breaks between colors
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = weight)) +
+  scale_color_stepsn(colors = c("green", "blue", "purple"),
+                     breaks = c(0, 20, 40)) # if you give it more breaks than colors, it will great a gradient between colors 
+```
+#### Update a color scheme using a palette in paletteer
+Make a horizontal boxplot with common_name on the y-axis, total_length on the x-axis, with color changing based on common_name
+```{r}
+lizards_fct <- lizards %>% 
+  mutate(common_name = fct_reorder(common_name, total_length, .fun = median))
+
+ggplot(data = lizards_fct, aes(y = common_name, x = total_length)) +
+  geom_boxplot(aes(fill = common_name), show.legend = FALSE) +
+  scale_fill_paletteer_d(palette = "beyonce::X10") #palette = "package::palette"
+```
+`View(paletts_d_names)` note package name and palette name
+
+```{r}
+ggplot(data = lizards, aes(y = common_name, x = total_length)) +
+  geom_poiny
+  scale_fill_paletteer_d(palette =
+```
+
