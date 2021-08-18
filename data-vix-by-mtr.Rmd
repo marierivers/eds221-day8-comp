@@ -177,10 +177,19 @@ ggplot(data = lizards_fct, aes(y = common_name, x = total_length)) +
   scale_fill_paletteer_d(palette = "beyonce::X10") #palette = "package::palette"
 ```
 `View(paletts_d_names)` note package name and palette name
-
+Themes
 ```{r}
-ggplot(data = lizards, aes(y = common_name, x = total_length)) +
-  geom_poiny
-  scale_fill_paletteer_d(palette =
+ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_point() +
+  theme(panel.background = element_rect(fill = "yellow", color = "purple", size = 10),
+        panel.grid.major.x = element_line(color = "red", size = 2), # most specific command wins
+        panel.grid.major = element_line(color = "blue"),
+        panel.grid.major.y = element_line(color = "orange", size = 1),
+        plot.background = element_rect(fill = "cyan4"),
+        axis.text.x = element_text(color = "orange"),
+        axis.title = element_text(color = "yellow", size = 12))
+# use `panel.grid = element_blank()` for no grid lines  
+# panel is about where the data is shown
+# plot is the larger background
 ```
 
