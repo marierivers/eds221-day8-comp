@@ -338,4 +338,12 @@ ggplot(data = jornada_vegetation) +
   theme_void()
 ```
 
+## Alt Text
+set this up in the top of the code chunck
+```{r, fig.alt = "a histogram showing the distribution of body mass in Adelie, Chinstrap, and Gentoo penguins"}
+library(palmerpenguins)
+ggplot(penguins, aes(x = body_mass_g)) +
+        geom_histogram() +
+         facet_wrap(~species)
+```
 
