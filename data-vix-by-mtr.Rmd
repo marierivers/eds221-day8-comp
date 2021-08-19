@@ -139,7 +139,7 @@ class(lizard_obs_count$date)
 
 Make a line plot (geom_line()) of date (x) and count (y)
 ```{r}
-# `y` lowercase is 2 diget year, `Y` upper case is a 4 year date
+# `y` lowercase is 2 didget year, `Y` upper case is a 4 year date
 ggplot(data = lizard_obs_count, aes(x = date, y = count)) +
   geom_line() +
   scale_x_date(date_breaks = "3 years",
@@ -192,4 +192,150 @@ ggplot(data = lizards, aes(x = total_length, y = weight)) +
 # panel is about where the data is shown
 # plot is the larger background
 ```
+
+## ggrepel
+great for adding labels to things
+```{r}
+## make a subset from lizards, called ww_lizards, that only contains observations for "western whiptail" lizards from the site "sand"
+
+ww_lizards <- lizards %>% 
+  filter(common_name == "western whiptail", site == "sand")
+
+ggplot(data = ww_lizards, aes(x = total_length, y = weight)) +
+  geom_point() +
+  geom_text_repel(aes(label = toe_num), size = 3, max.overlaps = 20)
+```
+```{r}
+# View(gapminder) dataset
+# Filter for only Eurpope, then create a scatterplot of gdpPercap (x) and lifeEpx (y) and lifeExp (y), labeled by country name
+
+gapminder_sub <- gapminder %>% 
+  filter(continent == "Europe", year == 2007)
+
+ggplot(data = gapminder_sub, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_text_repel(aes(label = country), size = 3, max.overlaps = 20)
+
+```
+## gghighlight
+allows you to specify conditions where points or conditions will be highlighted from others
+```{r}
+p <- ggplot(lizards, aes(x = total_length, y = weight)) +
+  geom_point()
+
+p + theme_dark()
+
+p + gghighlight(toe_num == 250, label_key = toe_num)
+```
+```{r}
+q <- ggplot(data = lizards, aes(x = total_length, y = weight)) +
+  geom_line(aes(color = common_name)) +
+  gghighlight(max(weight) >30)
+
+q
+```
+## patchwork for compound figures
+the job of patchwork is to make it easier to apply common themes to multiple figures in a graphic
+```{r}
+p | q
+```
+```{r}
+# use pemdas
+# only works if the patchwork package is attached
+(p | q) / q
+```
+```{r}
+(p * q) * (p / q) &
+  theme_minimal()
+```
+## A few new graph types
+### Marginal plots (from ggExtra)
+```{r}
+whiptails <- lizards %>% 
+  filter(common_name == "western whiptail") %>% 
+  drop_na(total_length, weight)
+
+# unique(whiptails$common_name)
+
+ggplot(data = whiptails, aes(x = total_length, y = weight)) +
+  geom_point() +
+  geom_rug()
+```
+Marginal plot with boxplots
+```{r}
+my_plot <- ggplot(data = whiptails, aes(x = total_length, y = weight)) +
+  geom_point(aes(color = sex), size = 2) +
+  scale_color_manual(values = c("cyan4", "black", "goldenrod"),
+                     name = "Sex:",
+                     labels = c("female", "juvenile", "male")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggMarginal(my_plot, type = "boxplot", groupColour = TRUE)
+## ggMarginal also works with histograms and density plots
+```
+## Beeswarm plot with ggbeesworm
+```{r}
+ggplot(data = whiptails, aes(x = sex, y = weight)) +
+  geom_beeswarm() +
+  geom_violin(fill = NA) +
+  geom_boxplot(fill = NA)
+  
+```
+### A heatmap with geom_tile()
+```{r}
+# make a new data frame called lizard_count, starting from lizards, with date converted to class Date. Then count by year and common name the number of lizards observed.
+
+lizard_count2 <- lizards %>% 
+  mutate(date = lubridate::mdy(date)) %>% 
+  count(year = lubridate::year(date), common_name) %>% 
+  drop_na()
+# or use mutate(year = lubridate::year(date))
+# or sure group_by, summarize n()
+
+ggplot(data = lizard_count2, aes(x = year, y = common_name)) +
+  geom_tile(aes(fill = n), show.legend = FALSE) +
+  geom_text(aes(label = n), color = "white", size = 3) +
+  scale_fill_gradientn(colors = c("navy", "red", "orange")) +
+  theme_minimal() +
+  labs(x = "Year", y = "Lizard common name")
+
+# gradientn allows you to pick as many colors as you want  
+
+```
+```{r}
+# scale_fill_viridis_c() is color blind friendly
+ggplot(data = lizard_count2, aes(x = year, y = common_name)) +
+  geom_tile(aes(fill = n), show.legend = FALSE) +
+  geom_text(aes(label = n), color = "white", size = 3) +
+  scale_fill_viridis_c()
+```
+## Make a map!
+Use `read_sf` to read in the "doc.kml" file
+```{r}
+# type `here()` in the console to determine where you are
+jornada_vegetation <- read_sf(here("data_raw", "spatial_vegetation", "doc.kml")) %>% 
+  select(Name) %>% 
+  clean_names()
+
+ggplot(data = jornada_vegetation) +
+  geom_sf(aes(fill = name), color = NA) +
+  scale_fill_paletteer_d(palette = "ggthemes::manyeys") +
+  labs(x = "Longitude",
+       y = "Latitude",
+       fill = "Dominant vegetation:")
+
+# `scale_fill_paletteer_d()` because the names are discrete values rather than continuous
+```
+```{r}
+jornada_vegetation <- read_sf(here("data_raw", "spatial_vegetation", "doc.kml")) %>% 
+  select(Name) %>% 
+  clean_names()
+
+ggplot(data = jornada_vegetation) +
+  geom_sf(aes(fill = name), color = NA) +
+  scale_fill_paletteer_d(palette = "ggthemes::manyeys") +
+  theme_void()
+```
+
 
